@@ -82,11 +82,11 @@ java -jar target/dataloadutils-0.0.1-SNAPSHOT-jar-with-dependencies.jar -u <user
 
 1. Once you have built the project (command line or eclipse) in order to distribute it, delete the following directories under `target`:
 
-- archive-tmp						
-- classes							
-- test-classes
-- maven-archiver
-- maven-status
+	- archive-tmp						
+	- classes							
+	- test-classes
+	- maven-archiver
+	- maven-status
 
 2. ZIP the `target` directory and that should serve as your distribution.
 
