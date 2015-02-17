@@ -11,7 +11,7 @@ public class EncryptionUtil {
 
     private Key gKey = null;
     private String gCipherSeed = "namastearrigato";
-    private String gCipherKey = "51dda30be226233d";
+    private String gCipherKey = "51dda30be226233d"; 
 
     public EncryptionUtil() {
     }

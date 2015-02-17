@@ -1,6 +1,7 @@
 package com.comcast.salesforce;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -52,7 +53,8 @@ public class RetrieveResults {
 		options.addOption("logFile",true,"Data loader log file");
 		options.addOption("successFile",true,"Location to create Success CSV file");
 		options.addOption("errorFile",true,"Location to create Error CSV file");
-		options.addOption("operation",true,"update|upsert");
+		options.addOption("operation",true,"update|upsert|insert");
+		options.addOption("encryptionKeyFile",false,"Path to encryption key file");
 		CommandLineParser parser = new BasicParser();
 		CommandLine cmd = parser.parse( options, args);
 		if( !cmd.hasOption("u") || !cmd.hasOption("p") || 
@@ -64,6 +66,10 @@ public class RetrieveResults {
 		    System.exit(-1);
 		}else{
 			EncryptionUtil encUtil = new EncryptionUtil();
+			if(cmd.hasOption("encryptionKeyFile")){
+				log.info(String.format("Setting Encryption key file from %s",cmd.getOptionValue("encryptionKeyFile")));
+				encUtil.setCipherKeyFromFilePath(cmd.getOptionValue("encryptionKeyFile"));
+			}
 			log.info(String.format("Starting to retrieve results"));
 			log.info(String.format("Username:%s",cmd.getOptionValue("u")));
 			log.info(String.format("Password:*****"));
@@ -78,10 +84,10 @@ public class RetrieveResults {
 																			cmd.getOptionValue("url"));
 			BulkConnection bulkConn = ConnectionUtils.getBulkConnection(pConn.getConfig(),props.getProperty("apiversion"));
 			generateSuccessAndErrorFile(jobId,
-									cmd.getOptionValue("successFile"),
-									cmd.getOptionValue("errorFile"),
-									bulkConn,
-									cmd.getOptionValue("operation")
+										cmd.getOptionValue("successFile"),
+										cmd.getOptionValue("errorFile"),
+										bulkConn,
+										cmd.getOptionValue("operation")
 			);
 		}
 		
@@ -117,22 +123,37 @@ public class RetrieveResults {
 		String batchId = null;
 		BatchInfoList bList = bulkConn.getBatchInfoList(jobId);
 		log.info(String.format("JobId: %s - Total Batches: %s",jobId,bList.getBatchInfo().length));
-
+		File theFile = new File(successFile);
+		if(theFile.exists()){
+			log.info(String.format("Deleting success file at %s",successFile));
+		}
+		
+		theFile = new File(errorFile);
+		if(theFile.exists()){
+			log.info(String.format("Deleting error file at %s",successFile));
+		}
+		
 		PrintWriter successFileOut = new PrintWriter(new FileOutputStream(successFile));
 		PrintWriter errorFileOut = new PrintWriter(new FileOutputStream(errorFile));
-		Integer batchIdx=1;
+		Integer batchIdx=1,successCnt=0,errorCnt=0,totalCnt=0;
 		Map<String,Integer> recCounts;
+		BatchInfo[] batchInfoList = bList.getBatchInfo();
 		try{
-			for (BatchInfo batchInfo : bList.getBatchInfo()) {
+			for (BatchInfo batchInfo : batchInfoList) {
 					batchId = batchInfo.getId();
-					log.info(String.format(	"JobId: %s - Starting to procss BatchId: %s",jobId,batchId));
+					log.info(String.format(	"JobId: %s - Starting to process BatchId: %s",jobId,batchId));
 					recCounts = addToSuccessErrorFiles(	bulkConn.getBatchRequestInputStream(jobId, batchId),
 														bulkConn.getBatchResultStream(jobId, batchId),
 														successFileOut, errorFileOut,
 														batchIdx,operation);
 		
-					log.info(String.format(	"JobId: %s - BatchId: %s, Successful: %s records, Errors: %s records added to success and error files",
+					successCnt+=recCounts.get(SUCCESS);
+					errorCnt+=recCounts.get(ERROR);
+					totalCnt =successCnt+errorCnt;
+					log.info(String.format(	"JobId: %s - BatchId: %s [ %d of %d batches processed] - Successful: %s records, Errors: %s records added to success and error files",
 											jobId,batchId,
+											batchIdx,
+											batchInfoList.length,
 											recCounts.get(SUCCESS),
 											recCounts.get(ERROR)
 										)
@@ -150,6 +171,7 @@ public class RetrieveResults {
 				errorFileOut.close();
 			}
 		}
+		log.info(String.format(	"JobId: %s - Total = %d, Success = %d, Errors = %d",jobId,totalCnt,successCnt,errorCnt));
 		log.info(String.format(	"JobId: %s - Completed success and error file retrieval",jobId));
 
 	}
