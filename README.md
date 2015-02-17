@@ -69,8 +69,8 @@ The git repository includes all required files to import the project into eclips
 - `-url <loginEndpoint>` : The SOAP Login endpoint url. 
 - `-successFile <success file location>`: Location where the success file needs to be generated
 - `-errorFile <error file location>` : Location where the error file needs to be generated
-- `operation update|insert|upsert` : What type of data load operation was done.
-- `encryptionKeyFile <key file location>` : Location of the encryption key file that was used to encrpyt the password. This is an optional parameter and if not passed will use the default encryption key.
+- `-operation update|insert|upsert` : What type of data load operation was done.
+- `-encryptionKeyFile <key file location>` : Location of the encryption key file that was used to encrpyt the password. This is an optional parameter and if not passed will use the default encryption key.
 
 To execute the program locally or on a server use the below command:
 
