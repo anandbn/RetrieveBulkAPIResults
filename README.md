@@ -65,7 +65,7 @@ The git repository includes all required files to import the project into eclips
 
 - `-u <username>` : Salesforce Username to be used
 - `-p <password>` : Encrypted password string. This is the same password string that is used in the data loader configuration file
-- `-logFile <location of the log file>` : The log file location which is used to extract the Job Id for which the success and error files need to be retrieved
+- `-logFile <location of the log file>` : The log file location which is used to extract the Job Id for which the success and error files need to be retrieved. See the `sample\dataload.log` file for an example of the log file that is typically expected. 
 - `-url <loginEndpoint>` : The SOAP Login endpoint url. 
 - `-successFile <success file location>`: Location where the success file needs to be generated
 - `-errorFile <error file location>` : Location where the error file needs to be generated
