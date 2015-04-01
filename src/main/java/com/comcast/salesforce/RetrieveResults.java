@@ -54,7 +54,7 @@ public class RetrieveResults {
 		options.addOption("successFile",true,"Location to create Success CSV file");
 		options.addOption("errorFile",true,"Location to create Error CSV file");
 		options.addOption("operation",true,"update|upsert|insert");
-		options.addOption("encryptionKeyFile",false,"Path to encryption key file");
+		options.addOption("encryptionKeyFile",true,"Path to encryption key file");
 		CommandLineParser parser = new BasicParser();
 		CommandLine cmd = parser.parse( options, args);
 		if( !cmd.hasOption("u") || !cmd.hasOption("p") || 
@@ -65,11 +65,6 @@ public class RetrieveResults {
 		    formater.printHelp("RetrieveResults", options);
 		    System.exit(-1);
 		}else{
-			EncryptionUtil encUtil = new EncryptionUtil();
-			if(cmd.hasOption("encryptionKeyFile")){
-				log.info(String.format("Setting Encryption key file from %s",cmd.getOptionValue("encryptionKeyFile")));
-				encUtil.setCipherKeyFromFilePath(cmd.getOptionValue("encryptionKeyFile"));
-			}
 			log.info(String.format("Starting to retrieve results"));
 			log.info(String.format("Username:%s",cmd.getOptionValue("u")));
 			log.info(String.format("Password:*****"));
@@ -77,6 +72,13 @@ public class RetrieveResults {
 			log.info(String.format("logFile:%s",cmd.getOptionValue("logFile")));
 			log.info(String.format("successFile:%s",cmd.getOptionValue("successFile")));
 			log.info(String.format("errorFile:%s",cmd.getOptionValue("errorFile")));
+			log.info(String.format("encryptionKeyFile:%s",cmd.getOptionValue("encryptionKeyFile")));
+
+			EncryptionUtil encUtil = new EncryptionUtil();
+			if(cmd.hasOption("encryptionKeyFile")){
+				log.info(String.format("Setting Encryption key file from %s",cmd.getOptionValue("encryptionKeyFile")));
+				encUtil.setCipherKeyFromFilePath(cmd.getOptionValue("encryptionKeyFile"));
+			}
 			String jobId = getJobId(cmd.getOptionValue("logFile"));
 			log.info(String.format("Fetched job id from logFile:%s",jobId));
 			PartnerConnection pConn = ConnectionUtils.getPartnerConnection(	cmd.getOptionValue("u"),
@@ -125,12 +127,12 @@ public class RetrieveResults {
 		log.info(String.format("JobId: %s - Total Batches: %s",jobId,bList.getBatchInfo().length));
 		File theFile = new File(successFile);
 		if(theFile.exists()){
-			log.info(String.format("Deleting success file at %s",successFile));
+			log.info(String.format("Overwriting success file at %s",successFile));
 		}
 		
 		theFile = new File(errorFile);
 		if(theFile.exists()){
-			log.info(String.format("Deleting error file at %s",successFile));
+			log.info(String.format("Overwriting error file at %s",errorFile));
 		}
 		
 		PrintWriter successFileOut = new PrintWriter(new FileOutputStream(successFile));
@@ -222,14 +224,14 @@ public class RetrieveResults {
 	
 	private void writeHeaderLine(PrintWriter successFile,PrintWriter errorFile,String hdrLine,String operation) throws Exception{
 		if("update".equalsIgnoreCase(operation)){
-			String hdr = hdrLine +",\"ID\",\"STATUS\"";
+			String hdr = "\"ID\","+hdrLine +",\"STATUS\"";
 			successFile.println(hdr);
-			hdr = hdrLine +",\"ID\",\"ERROR\"";
+			hdr = hdrLine +",\"ERROR\"";
 			errorFile.println(hdr);
 		}else if("insert".equalsIgnoreCase(operation)){
-			String hdr = hdrLine +",\"ID\",\"STATUS\"";
+			String hdr = "\"ID\","+hdrLine +",\"STATUS\"";
 			successFile.println(hdr);
-			hdr = hdrLine +",\"ID\",\"ERROR\"";
+			hdr = hdrLine +",\"ERROR\"";
 			errorFile.println(hdr);
 		}else {
 			throw new Exception(String.format("Unsupported operation %s",operation));
@@ -240,9 +242,17 @@ public class RetrieveResults {
 									String reqLine,String operation,
 									Map<String, String> resultInfo) throws Exception{
 		if("update".equalsIgnoreCase(operation)){
-			successFile.println(reqLine+String.format(",\"%s\",\"Item Updated\"",(resultInfo.get("Id")!=null?resultInfo.get("Id"):"")));
+			successFile.println(String.format(	"\"%s\",%s,\"Item Updated\"",
+												(resultInfo.get("Id")!=null?resultInfo.get("Id"):""),
+												reqLine
+											)
+			);
 		}else if("insert".equalsIgnoreCase(operation)){
-			successFile.println(reqLine+String.format(",\"%s\",\"Item Created\"",(resultInfo.get("Id")!=null?resultInfo.get("Id"):"")));
+			successFile.println(String.format(	"\"%s\",%s,\"Item Created\"",
+					(resultInfo.get("Id")!=null?resultInfo.get("Id"):""),
+					reqLine
+				)
+			);
 		}else {
 			throw new Exception(String.format("Unsupported operation %s",operation));
 		}		
@@ -251,12 +261,17 @@ public class RetrieveResults {
 	private void writeErrorLine(	PrintWriter errorFile,
 									String reqLine,String operation,
 									Map<String, String> resultInfo) throws Exception{
-		if("update".equalsIgnoreCase(operation) || "insert".equalsIgnoreCase(operation)){
-			errorFile.println(reqLine+String.format(",\"%s\",\"%s\"",
-													  (resultInfo.get("Id")!=null?resultInfo.get("Id"):""),
+		if("update".equalsIgnoreCase(operation)){
+			errorFile.println(reqLine+String.format(",\"%s\"",
 													  resultInfo.get("Error")
 													)
 			);
+		}else if("insert".equalsIgnoreCase(operation)){
+			errorFile.println(reqLine+String.format(",\"%s\"",
+					  		resultInfo.get("Error")
+					)
+			);
+			
 		}else {
 			throw new Exception(String.format("Unsupported operation %s",operation));
 		}		
